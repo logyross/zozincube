@@ -54,7 +54,6 @@ void markLine(Coord coord1, Coord coord2, std::array<std::array<bool, (int)h>, (
 		slope = (coord2.y - coord1.y) / (coord2.x - coord1.x);
 	}
 
-
 	double intercept {};
 	if (slope != 0.0)
 	{
@@ -62,11 +61,25 @@ void markLine(Coord coord1, Coord coord2, std::array<std::array<bool, (int)h>, (
 	}
 
 	//std::cout << "slope = " << slope << " intercep = " << intercept << "\n";
-	for (double i = coord1.x; i <= coord2.x; i++)
+	if (static_cast<int>(coord1.x) != static_cast<int>(coord2.x))
 	{
-		double j = slope * i + intercept;
-		//std::cout << "i = " << i << " j = " << j << "\n";
-		map[static_cast<size_t>(i)][static_cast<size_t>(j)] = true;
+		for (double i = coord1.x; i <= coord2.x; i++)
+		{
+			double j = slope * i + intercept;
+			//std::cout << "i = " << i << " j = " << j << "\n";
+			map[static_cast<size_t>(i)][static_cast<size_t>(j)] = true;
+		}
+	}
+	else
+	{
+
+		for (double i = coord1.y; i <= coord2.y; i++)
+		{
+			double j = coord1.x;
+			//std::cout << "i = " << i << " j = " << j << "\n";
+			map[static_cast<size_t>(j)][static_cast<size_t>(i)] = true;
+		}
+	
 	}
 }
 
@@ -122,6 +135,7 @@ void handleLine(Coord3D coord1, Coord3D coord2, double dz, double angle, std::ar
 	normalized_coord2.x = std::floor(normalized_coord2.x);
 	normalized_coord2.y = std::floor(normalized_coord2.y);
 	markLine(normalized_coord, normalized_coord2, map);
+	markLine(normalized_coord2, normalized_coord, map);
 }
 
 
@@ -166,10 +180,10 @@ int main()
 
 		std::array<std::array<bool, (int)h>, (int)w> map{};
 
-		for (Coord3D point : vs)
-		{
-			handlePoint(point, map, dz, angle);
-		}
+		// for (Coord3D point : vs)
+		// {
+		// 	handlePoint(point, map, dz, angle);
+		// }
 
 		handleLine(vs[0], vs[1], dz, angle, map);
 		handleLine(vs[1], vs[2], dz, angle, map);
@@ -181,10 +195,10 @@ int main()
 		handleLine(vs[6], vs[7], dz, angle, map);
 		handleLine(vs[7], vs[4], dz, angle, map);
 
-		handleLine(vs[0], vs[4], dz, angle, map);
-		handleLine(vs[1], vs[5], dz, angle, map);
-		handleLine(vs[2], vs[6], dz, angle, map);
-		handleLine(vs[3], vs[7], dz, angle, map);
+		handleLine(vs[4], vs[0], dz, angle, map);
+		handleLine(vs[5], vs[1], dz, angle, map);
+		handleLine(vs[6], vs[2], dz, angle, map);
+		handleLine(vs[7], vs[3], dz, angle, map);
 
 
 		// for (auto arr : fs)
