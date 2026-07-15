@@ -5,12 +5,16 @@
 #include <cmath>
 #define _USE_MATH_DEFINES
 
-constexpr double w = 16*60;
-constexpr double h = 16*60;
+constexpr double width = 16*60;
+constexpr double height = 16*60;
 constexpr double fps = 60;
 constexpr double dt = 1/fps;
+constexpr int point_size = 10;
+constexpr int total_frames = 120;
 
-using PixelMap = std::array<std::array<bool, (int)h>, (int)w>;
+// 2D array that represents the current state of the screen (true means draw red) 
+using PixelMap = std::array<std::array<bool, static_cast<int>(height)>, static_cast<int>(width)>;
+static PixelMap map{};
 
 struct Coord 
 {
@@ -25,7 +29,8 @@ struct Coord3D
 	double z{};
 };
 
-const Coord3D vs[]
+// vertices that represent the box in 3D space
+const Coord3D vertices[]
 {
 	{ 0.25,  0.25,   0.25},
 	{-0.25,  0.25,   0.25},
@@ -38,108 +43,122 @@ const Coord3D vs[]
 	{ 0.25, -0.25,  -0.25},
 };
 
-void	 	draw_box(double dz, double angle, PixelMap &map);
-void	 	draw_screen(std::ofstream &f, PixelMap map);
+// would be better to use this to determine the faces
+[[maybe_unused]] const int faces[6][4]
+{
+	{0, 1, 2, 3},
+	{4, 5, 6, 7},
+	{4, 0},
+	{5, 1},
+	{6, 2},
+	{7, 3}
+};
+
+void	 	draw_box(double dz, double angle);
+void	 	draw_screen(std::ofstream &f);
 void		clear_screen();
-void	 	handle_line(Coord3D coord1, Coord3D coord2, double dz, double angle, PixelMap &map);
-void	 	handle_point(Coord3D point, double dz, double angle, PixelMap &map);
+void	 	handle_line(Coord3D coord1, Coord3D coord2, double dz, double angle);
+void	 	handle_point(Coord3D point, double dz, double angle);
 std::ofstream	initFrame(int number);
-void	 	mark_line(Coord coord1, Coord coord2, PixelMap &map);
-void	 	mark_point(Coord coord, int size, PixelMap &map);
-Coord	 	normalize(Coord coord);
+void	 	mark_line(Coord coord1, Coord coord2);
+void	 	mark_point(Coord coord, int size);
 Coord	 	project(Coord3D coord);
-void	 	project_line_to_screen(Coord3D coord1, Coord3D coord2, PixelMap &map);
-void	 	project_point_to_screen(Coord3D coord, PixelMap &map);
+void	 	project_line_to_screen(Coord3D coord1, Coord3D coord2);
+void	 	project_point_to_screen(Coord3D coord);
 Coord3D	 	rotate_point_xz(Coord3D coord, double angle);
-Coord3D	 	translate_point(Coord3D coord, double dz);
+Coord3D	 	translate_point_z(Coord3D coord, double dz);
 
 int main()
 {
 	double dz = 1.0;
 	double angle = 0.0;
-	for (int t=0; t < 240; t++)
+	for (int t=0; t < total_frames; t++)
 	{
 		dz += 1*dt;
 		angle += M_PI*dt;
 
 		std::ofstream f = initFrame(t);
-		PixelMap map{};
 
-               // for (Coord3D point : vs)
-               //  {
-               //  	handle_point(point, dz, angle, map);
-               //  }
+               for (Coord3D point : vertices)
+                {
+			handle_point(point, dz, angle);
+                }
 
-		draw_box(dz, angle, map);
+		draw_box(dz, angle);
 
-		draw_screen(f, map);
+		draw_screen(f);
+		clear_screen();
 	}
 	return 0;
 }
 
-void draw_box(double dz, double angle, PixelMap &map)
+// TODO: the faces are hard coded. maybe we can store them in an array like vertices
+void draw_box(double dz, double angle)
 {
-	handle_line(vs[0], vs[1], dz, angle, map);
-	handle_line(vs[1], vs[2], dz, angle, map);
-	handle_line(vs[2], vs[3], dz, angle, map);
-	handle_line(vs[3], vs[0], dz, angle, map);
+	handle_line(vertices[0], vertices[1], dz, angle);
+	handle_line(vertices[1], vertices[2], dz, angle);
+	handle_line(vertices[2], vertices[3], dz, angle);
+	handle_line(vertices[3], vertices[0], dz, angle);
 
-	handle_line(vs[4], vs[5], dz, angle, map);
-	handle_line(vs[5], vs[6], dz, angle, map);
-	handle_line(vs[6], vs[7], dz, angle, map);
-	handle_line(vs[7], vs[4], dz, angle, map);
+	handle_line(vertices[4], vertices[5], dz, angle);
+	handle_line(vertices[5], vertices[6], dz, angle);
+	handle_line(vertices[6], vertices[7], dz, angle);
+	handle_line(vertices[7], vertices[4], dz, angle);
 
-	handle_line(vs[4], vs[0], dz, angle, map);
-	handle_line(vs[5], vs[1], dz, angle, map);
-	handle_line(vs[6], vs[2], dz, angle, map);
-	handle_line(vs[7], vs[3], dz, angle, map);
+	handle_line(vertices[4], vertices[0], dz, angle);
+	handle_line(vertices[5], vertices[1], dz, angle);
+	handle_line(vertices[6], vertices[2], dz, angle);
+	handle_line(vertices[7], vertices[3], dz, angle);
 }
 
-void handle_point(Coord3D point, double dz, double angle, PixelMap &map)
+// determine the next position of the 3D points and lines then project them on the screen
+void handle_point(Coord3D point, double dz, double angle)
 {
 	point = rotate_point_xz(point, angle);
-	point = translate_point(point, dz);
-	project_point_to_screen(point, map);
+	point = translate_point_z(point, dz);
+	project_point_to_screen(point);
 }
-
-void handle_line(Coord3D coord1, Coord3D coord2, double dz, double angle, PixelMap &map)
+ 
+void handle_line(Coord3D coord1, Coord3D coord2, double dz, double angle)
 {
 	coord1 = rotate_point_xz(coord1, angle);
-	coord1 = translate_point(coord1,dz);
+	coord1 = translate_point_z(coord1,dz);
 
 	coord2 = rotate_point_xz(coord2, angle);
-	coord2 = translate_point(coord2,dz);
+	coord2 = translate_point_z(coord2,dz);
 
-	project_line_to_screen(coord1, coord2, map);
+	project_line_to_screen(coord1, coord2);
 }
 
-void project_point_to_screen(Coord3D coord, PixelMap &map)
+// project 3D coords into 2D and mark them on the map
+void project_point_to_screen(Coord3D coord)
 {
-	mark_point(normalize(project(coord)), 20, map);
+	Coord point = project(coord);
+	// centering the point (otherwise it defaults to upper left of the box)
+	point.x = point.x - point_size/2;
+	point.y = point.y - point_size/2;
+	mark_point(point, point_size);
 }
 
-void project_line_to_screen(Coord3D coord1, Coord3D coord2, PixelMap &map)
+void project_line_to_screen(Coord3D coord1, Coord3D coord2)
 {
-	Coord normalized_coord = normalize(project(coord1));
-	Coord normalized_coord2 = normalize(project(coord2));
+	Coord normalized_coord = project(coord1);
+	Coord normalized_coord2 = project(coord2);
 
-	normalized_coord.x = std::floor(normalized_coord.x);
-	normalized_coord.y = std::floor(normalized_coord.y);
-	normalized_coord2.x = std::floor(normalized_coord2.x);
-	normalized_coord2.y = std::floor(normalized_coord2.y);
-
-	mark_line(normalized_coord, normalized_coord2, map);
-	mark_line(normalized_coord2, normalized_coord, map);
+	// because mark line is pretty hacky, we need to draw the same line twice from both directions.
+	mark_line(normalized_coord, normalized_coord2);
+	mark_line(normalized_coord2, normalized_coord);
 }
 
-void mark_point(Coord coord, int size, PixelMap &map)
+// mark a "size" sized box at coord.
+void mark_point(Coord coord, int size)
 {
 	for (double x = coord.x; x < coord.x + size; x++)
 	{
 		for (double y = coord.y; y < coord.y + size; y++)
 		{
-			if (x < w && x >= 0
-			&& y < h && y >= 0)
+			if (x < width && x >= 0
+			&& y < height && y >= 0)
 			{
 				map[static_cast<size_t>(x)][static_cast<size_t>(y)] = true;
 			}
@@ -147,7 +166,8 @@ void mark_point(Coord coord, int size, PixelMap &map)
 	}
 }
 
-void mark_line(Coord coord1, Coord coord2, PixelMap &map)
+// find all the points that connect coord1 and coord2 and mark them.
+void mark_line(Coord coord1, Coord coord2)
 {
 	double slope {};
 	if (static_cast<int>(coord1.x) != static_cast<int>(coord2.x))
@@ -162,9 +182,9 @@ void mark_line(Coord coord1, Coord coord2, PixelMap &map)
 	{
 		for (double i = coord1.x; i <= coord2.x; i++)
 		{
-			double j = slope * i + intercept;
-			//std::cout << "i = " << i << " j = " << j << "\n";
-			map[static_cast<size_t>(i)][static_cast<size_t>(j)] = true;
+			size_t x = static_cast<size_t>(i);
+			size_t y = static_cast<size_t>(slope * i + intercept);
+			map[x][y] = true;
 		}
 	}
 	else
@@ -172,28 +192,32 @@ void mark_line(Coord coord1, Coord coord2, PixelMap &map)
 
 		for (double i = coord1.y; i <= coord2.y; i++)
 		{
-			double j = coord1.x;
-			//std::cout << "i = " << i << " j = " << j << "\n";
-			map[static_cast<size_t>(j)][static_cast<size_t>(i)] = true;
+			size_t x = static_cast<size_t>(coord1.x);
+			size_t y = static_cast<size_t>(i);
+			map[x][y] = true;
 		}
 	
 	}
 }
 
-Coord normalize(Coord coord)
-{
-	return {(coord.x+1)/2.0*w, 
-		(1 - (coord.y+1)/2.0)*h};
-}
 
 
 
+
+
+// project the 3D point into a 2D coordinate on screen 
+// 3D coords range between (-1, 1), 2D coords range between (0, height|width)
 Coord project(Coord3D coord)
 {
-	return {coord.x/coord.z, coord.y/coord.z};
+	Coord projected_coord = {coord.x/coord.z, coord.y/coord.z};
+	projected_coord.x = (projected_coord.x+1)/2.0*width;
+	projected_coord.y = (1 - (projected_coord.y+1)/2.0)*height; 
+	return projected_coord;
+
 }
 
-Coord3D translate_point(Coord3D coord, double dz)
+// 3D point movement functions
+Coord3D translate_point_z(Coord3D coord, double dz)
 {
 	return {coord.x, coord.y, coord.z+dz};
 }
@@ -209,6 +233,7 @@ Coord3D rotate_point_xz(Coord3D coord, double angle)
 	};
 }
 
+// create ppm file for current frame
 std::ofstream initFrame(int number)
 {
 	std::string fileName = "output/frame-" + std::to_string(number) + ".ppm";
@@ -221,40 +246,49 @@ std::ofstream initFrame(int number)
 	}
 
 	f << "P6\n";
-	f << w << " " << h << "\n";
+	f << width << " " << height << "\n";
 	f << "255\n";
 
 	return f;
 }
 
-
-void draw_screen(std::ofstream &f, PixelMap map)
+// write pixel color codes on the ppm file based on the current state of PixelMap
+void draw_screen(std::ofstream &f)
 {
-	for (int y=0; y < h; y++)
+	for (int y=0; y < height; y++)
 	{
-		for (int x=0; x < w; x++)
+		for (int x=0; x < width; x++)
 		{
-			if (map[static_cast<size_t>(x)][static_cast<size_t>(y)]) 
+			size_t x_coord = static_cast<size_t>(x);
+			size_t y_coord = static_cast<size_t>(y);
+
+			if (map[x_coord][y_coord]) 
 			{
-				f.put(static_cast<char>(0xFF));
-				f.put(static_cast<char>(0x10));
-				f.put(static_cast<char>(0x10));
+				f.put(0xFF);
+				f.put(0x10);
+				f.put(0x10);
 			}
 			else
 			{
-				f.put(static_cast<char>(0x10));
-				f.put(static_cast<char>(0x10));
-				f.put(static_cast<char>(0x10));
+				f.put(0x10);
+				f.put(0x10);
+				f.put(0x10);
 			}
 		}
 	}
 }
 
-// void clear_screen()
-// {
-// 	for (int x=0; x < w; x++)
-// 	{
-// 		map[x] = (false);
-// 	}
-// }
+// clear the map for the next frame
+void clear_screen()
+{
+	for (int y=0; y < height; y++)
+	{
+		for (int x=0; x < width; x++)
+		{
+			size_t x_coord = static_cast<size_t>(x);
+			size_t y_coord = static_cast<size_t>(y);
+			map[x_coord][y_coord] = false;
+		}
+	}
+}
 
