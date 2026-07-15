@@ -10,6 +10,8 @@ constexpr double h = 16*60;
 constexpr double fps = 60;
 constexpr double dt = 1/fps;
 
+using PixelMap = std::array<std::array<bool, (int)h>, (int)w>;
+
 struct Coord 
 {
 	double x{};
@@ -23,13 +25,114 @@ struct Coord3D
 	double z{};
 };
 
-Coord normalize(Coord coord)
+const Coord3D vs[]
 {
-	return {(coord.x+1)/2.0*w, 
-		(1 - (coord.y+1)/2.0)*h};
+	{ 0.25,  0.25,   0.25},
+	{-0.25,  0.25,   0.25},
+	{-0.25, -0.25,   0.25},
+	{ 0.25, -0.25,   0.25},
+
+	{ 0.25,  0.25,  -0.25},
+	{-0.25,  0.25,  -0.25},
+	{-0.25, -0.25,  -0.25},
+	{ 0.25, -0.25,  -0.25},
+};
+
+void	 	draw_box(double dz, double angle, PixelMap &map);
+void	 	draw_screen(std::ofstream &f, PixelMap map);
+void		clear_screen();
+void	 	handle_line(Coord3D coord1, Coord3D coord2, double dz, double angle, PixelMap &map);
+void	 	handle_point(Coord3D point, double dz, double angle, PixelMap &map);
+std::ofstream	initFrame(int number);
+void	 	mark_line(Coord coord1, Coord coord2, PixelMap &map);
+void	 	mark_point(Coord coord, int size, PixelMap &map);
+Coord	 	normalize(Coord coord);
+Coord	 	project(Coord3D coord);
+void	 	project_line_to_screen(Coord3D coord1, Coord3D coord2, PixelMap &map);
+void	 	project_point_to_screen(Coord3D coord, PixelMap &map);
+Coord3D	 	rotate_point_xz(Coord3D coord, double angle);
+Coord3D	 	translate_point(Coord3D coord, double dz);
+
+int main()
+{
+	double dz = 1.0;
+	double angle = 0.0;
+	for (int t=0; t < 240; t++)
+	{
+		dz += 1*dt;
+		angle += M_PI*dt;
+
+		std::ofstream f = initFrame(t);
+		PixelMap map{};
+
+               // for (Coord3D point : vs)
+               //  {
+               //  	handle_point(point, dz, angle, map);
+               //  }
+
+		draw_box(dz, angle, map);
+
+		draw_screen(f, map);
+	}
+	return 0;
 }
 
-void markPoint(Coord coord, int size, std::array<std::array<bool, (int)h>, (int)w> &map)
+void draw_box(double dz, double angle, PixelMap &map)
+{
+	handle_line(vs[0], vs[1], dz, angle, map);
+	handle_line(vs[1], vs[2], dz, angle, map);
+	handle_line(vs[2], vs[3], dz, angle, map);
+	handle_line(vs[3], vs[0], dz, angle, map);
+
+	handle_line(vs[4], vs[5], dz, angle, map);
+	handle_line(vs[5], vs[6], dz, angle, map);
+	handle_line(vs[6], vs[7], dz, angle, map);
+	handle_line(vs[7], vs[4], dz, angle, map);
+
+	handle_line(vs[4], vs[0], dz, angle, map);
+	handle_line(vs[5], vs[1], dz, angle, map);
+	handle_line(vs[6], vs[2], dz, angle, map);
+	handle_line(vs[7], vs[3], dz, angle, map);
+}
+
+void handle_point(Coord3D point, double dz, double angle, PixelMap &map)
+{
+	point = rotate_point_xz(point, angle);
+	point = translate_point(point, dz);
+	project_point_to_screen(point, map);
+}
+
+void handle_line(Coord3D coord1, Coord3D coord2, double dz, double angle, PixelMap &map)
+{
+	coord1 = rotate_point_xz(coord1, angle);
+	coord1 = translate_point(coord1,dz);
+
+	coord2 = rotate_point_xz(coord2, angle);
+	coord2 = translate_point(coord2,dz);
+
+	project_line_to_screen(coord1, coord2, map);
+}
+
+void project_point_to_screen(Coord3D coord, PixelMap &map)
+{
+	mark_point(normalize(project(coord)), 20, map);
+}
+
+void project_line_to_screen(Coord3D coord1, Coord3D coord2, PixelMap &map)
+{
+	Coord normalized_coord = normalize(project(coord1));
+	Coord normalized_coord2 = normalize(project(coord2));
+
+	normalized_coord.x = std::floor(normalized_coord.x);
+	normalized_coord.y = std::floor(normalized_coord.y);
+	normalized_coord2.x = std::floor(normalized_coord2.x);
+	normalized_coord2.y = std::floor(normalized_coord2.y);
+
+	mark_line(normalized_coord, normalized_coord2, map);
+	mark_line(normalized_coord2, normalized_coord, map);
+}
+
+void mark_point(Coord coord, int size, PixelMap &map)
 {
 	for (double x = coord.x; x < coord.x + size; x++)
 	{
@@ -44,10 +147,8 @@ void markPoint(Coord coord, int size, std::array<std::array<bool, (int)h>, (int)
 	}
 }
 
-// decide if coord1 or coord2
-void markLine(Coord coord1, Coord coord2, std::array<std::array<bool, (int)h>, (int)w> &map)
+void mark_line(Coord coord1, Coord coord2, PixelMap &map)
 {
-	//std::cout << "1X = " << coord1.x << " 1Y = " << coord1.y << " 2X = " << coord2.x << " 2Y = " << coord2.y << "\n";
 	double slope {};
 	if (static_cast<int>(coord1.x) != static_cast<int>(coord2.x))
 	{
@@ -55,12 +156,8 @@ void markLine(Coord coord1, Coord coord2, std::array<std::array<bool, (int)h>, (
 	}
 
 	double intercept {};
-	if (slope != 0.0)
-	{
-		intercept = coord1.y - slope * coord1.x;
-	}
+	intercept = coord1.y - slope * coord1.x;
 
-	//std::cout << "slope = " << slope << " intercep = " << intercept << "\n";
 	if (static_cast<int>(coord1.x) != static_cast<int>(coord2.x))
 	{
 		for (double i = coord1.x; i <= coord2.x; i++)
@@ -83,18 +180,25 @@ void markLine(Coord coord1, Coord coord2, std::array<std::array<bool, (int)h>, (
 	}
 }
 
+Coord normalize(Coord coord)
+{
+	return {(coord.x+1)/2.0*w, 
+		(1 - (coord.y+1)/2.0)*h};
+}
+
+
 
 Coord project(Coord3D coord)
 {
 	return {coord.x/coord.z, coord.y/coord.z};
 }
 
-Coord3D translatePoint(Coord3D coord, double dz)
+Coord3D translate_point(Coord3D coord, double dz)
 {
 	return {coord.x, coord.y, coord.z+dz};
 }
 
-Coord3D rotate_xz(Coord3D coord, double angle)
+Coord3D rotate_point_xz(Coord3D coord, double angle)
 {
 	const double c = std::cos(angle);
 	const double s = std::sin(angle);
@@ -105,134 +209,52 @@ Coord3D rotate_xz(Coord3D coord, double angle)
 	};
 }
 
-void handlePoint(Coord3D coord, std::array<std::array<bool, (int)h>, (int)w> &map, double dz, double angle)
+std::ofstream initFrame(int number)
 {
-	//std::cout << "-- HANDLE POINT -- \n";
-	Coord3D rotated_point = rotate_xz(coord, angle);
-	Coord3D translated_point = translatePoint(rotated_point, dz);
-	//std::cout << "TRANSLATED -> X: " << translated_point.x << " Y: " << translated_point.y << "\n";
-	Coord projected_coord = project(translated_point);
-	//std::cout << "PROJECTED -> X: " << projected_coord.x << " Y: " << projected_coord.y << "\n";
-	Coord normalized_coord = normalize(projected_coord);
-	//std::cout << "NORMALIZED -> X: " << normalized_coord.x << " Y: " << normalized_coord.y << "\n";
-	markPoint(normalized_coord, 20, map);
-}
+	std::string fileName = "output/frame-" + std::to_string(number) + ".ppm";
+	std::ofstream f{fileName};
 
-void handleLine(Coord3D coord1, Coord3D coord2, double dz, double angle, std::array<std::array<bool, (int)h>, (int)w> &map)
-{
-	Coord3D rotated_point = rotate_xz(coord1, angle);
-	Coord3D translated_point = translatePoint(rotated_point, dz);
-	Coord projected_coord = project(translated_point);
-	Coord normalized_coord = normalize(projected_coord);
-
-	Coord3D rotated_point2 = rotate_xz(coord2, angle);
-	Coord3D translated_point2 = translatePoint(rotated_point2, dz);
-	Coord projected_coord2 = project(translated_point2);
-	Coord normalized_coord2 = normalize(projected_coord2);
-
-	normalized_coord.x = std::floor(normalized_coord.x);
-	normalized_coord.y = std::floor(normalized_coord.y);
-	normalized_coord2.x = std::floor(normalized_coord2.x);
-	normalized_coord2.y = std::floor(normalized_coord2.y);
-	markLine(normalized_coord, normalized_coord2, map);
-	markLine(normalized_coord2, normalized_coord, map);
-}
-
-
-const Coord3D vs[]
-{
-	{ 0.25,  0.25,   0.25},
-	{-0.25,  0.25,   0.25},
-	{-0.25, -0.25,   0.25},
-	{ 0.25, -0.25,   0.25},
-
-	{ 0.25,  0.25,  -0.25},
-	{-0.25,  0.25,  -0.25},
-	{-0.25, -0.25,  -0.25},
-	{ 0.25, -0.25,  -0.25},
-};
-
-[[maybe_unused]] const int fs[2][4] =
-{
-	{0, 1, 2, 3},
-	{4, 5, 6, 7}
-};
-
-int main()
-{
-	double dz = 1.0;
-	double angle = 0.0;
-	std::cout << "W: " << w << " H: " << h << "\n";
-	for (int t=0; t < 240; t++)
+	if (!f) 
 	{
-		//dz += 1*dt;
-		angle += M_PI*dt;
-    		std::string fileName = "output/test-" + std::to_string(t) + ".ppm";
-		std::ofstream f{fileName};
+		std::cerr << "Error: failed to create or open file\n";
+		std::exit(1);
+	}
 
-		if (!f) 
+	f << "P6\n";
+	f << w << " " << h << "\n";
+	f << "255\n";
+
+	return f;
+}
+
+
+void draw_screen(std::ofstream &f, PixelMap map)
+{
+	for (int y=0; y < h; y++)
+	{
+		for (int x=0; x < w; x++)
 		{
-			std::cerr << "failed to open file.\n";
-			return 1;
-		}
-
-		f << "P6\n";
-
-		std::array<std::array<bool, (int)h>, (int)w> map{};
-
-		// for (Coord3D point : vs)
-		// {
-		// 	handlePoint(point, map, dz, angle);
-		// }
-
-		handleLine(vs[0], vs[1], dz, angle, map);
-		handleLine(vs[1], vs[2], dz, angle, map);
-		handleLine(vs[2], vs[3], dz, angle, map);
-		handleLine(vs[3], vs[0], dz, angle, map);
-
-		handleLine(vs[4], vs[5], dz, angle, map);
-		handleLine(vs[5], vs[6], dz, angle, map);
-		handleLine(vs[6], vs[7], dz, angle, map);
-		handleLine(vs[7], vs[4], dz, angle, map);
-
-		handleLine(vs[4], vs[0], dz, angle, map);
-		handleLine(vs[5], vs[1], dz, angle, map);
-		handleLine(vs[6], vs[2], dz, angle, map);
-		handleLine(vs[7], vs[3], dz, angle, map);
-
-
-		// for (auto arr : fs)
-		// {
-		// 	int s = sizeof(*arr) / sizeof(arr[0]);
-		// 	for (int i=0; i < s; i++)
-		// 	{
-		// 		Coord3D a = vs[arr[i]];
-		// 		Coord3D b = vs[arr[(i+1)%s]];
-		// 		handleLine(a, b, dz, angle, map);
-		// 	}
-		// }
-
-		f << w << " " << h << "\n";
-		f << "255\n";
-
-		for (int y=0; y < h; y++)
-		{
-			for (int x=0; x < w; x++)
+			if (map[static_cast<size_t>(x)][static_cast<size_t>(y)]) 
 			{
-				if (map[static_cast<size_t>(x)][static_cast<size_t>(y)]) 
-				{
-					f.put(0xFF);
-					f.put(0x10);
-					f.put(0x10);
-				}
-				else
-				{
-					f.put(0x10);
-					f.put(0x10);
-					f.put(0x10);
-				}
+				f.put(static_cast<char>(0xFF));
+				f.put(static_cast<char>(0x10));
+				f.put(static_cast<char>(0x10));
+			}
+			else
+			{
+				f.put(static_cast<char>(0x10));
+				f.put(static_cast<char>(0x10));
+				f.put(static_cast<char>(0x10));
 			}
 		}
 	}
-	return 0;
 }
+
+// void clear_screen()
+// {
+// 	for (int x=0; x < w; x++)
+// 	{
+// 		map[x] = (false);
+// 	}
+// }
+
