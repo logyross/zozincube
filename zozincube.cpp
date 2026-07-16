@@ -52,29 +52,29 @@ constexpr Coord3D vertices[] {
 	{7, 3}
 };
 
-void	 	draw_box(double dz, double angle);
-void	 	draw_screen(std::ofstream &f);
-void		clear_screen();
+void	draw_box(double dz, double angle);
+void	draw_screen(std::ofstream &f);
+void	clear_screen();
 
-void	 	handle_line(Coord3D coord1, Coord3D coord2, double dz, double angle);
-void	 	handle_point(Coord3D point, double dz, double angle);
+void	handle_line(Coord3D coord1, Coord3D coord2, double dz, double angle);
+void	handle_point(Coord3D point, double dz, double angle);
 
-void	 	mark_line(Coord coord1, Coord coord2);
-void	 	mark_point(Coord coord, int size);
+void	mark_line(Coord coord1, Coord coord2);
+void	mark_point(Coord coord, int size);
 
-void	 	project_line_to_screen(Coord3D coord1, Coord3D coord2);
-void	 	project_point_to_screen(Coord3D coord);
+void	project_line_to_screen(Coord3D coord1, Coord3D coord2);
+void	project_point_to_screen(Coord3D coord);
 
-constexpr Coord 		project(Coord3D coord);
-constexpr Coord3D	 	rotate_point_xz(Coord3D coord, double angle);
-constexpr Coord3D	 	translate_point_z(Coord3D coord, double dz);
+constexpr Coord	project(Coord3D coord);
+constexpr Coord3D	rotate_point_xz(Coord3D coord, double angle);
+constexpr Coord3D	translate_point_z(Coord3D coord, double dz);
 
 std::ofstream	initFrame(int number);
 
 
-int main()
+int
+main()
 {
-
 	double dz = 1.0;
 	double angle = 0.0;
 	for (int t=0; t < frame_cnt; t++) {
@@ -97,7 +97,8 @@ int main()
 }
 
 // TODO: the faces are hard coded. we should read this from an array or something
-void draw_box(double dz, double angle)
+void
+draw_box(double dz, double angle)
 {
 	for (Coord3D point : vertices) {
 		handle_point(point, dz, angle);
@@ -120,14 +121,16 @@ void draw_box(double dz, double angle)
 }
 
 // determine the next position of the 3D points and lines then project them on the screen
-void handle_point(Coord3D point, double dz, double angle)
+void
+handle_point(Coord3D point, double dz, double angle)
 {
 	point = rotate_point_xz(point, angle);
 	point = translate_point_z(point, dz);
 	project_point_to_screen(point);
 }
- 
-void handle_line(Coord3D coord1, Coord3D coord2, double dz, double angle)
+
+void
+handle_line(Coord3D coord1, Coord3D coord2, double dz, double angle)
 {
 	coord1 = rotate_point_xz(coord1, angle);
 	coord1 = translate_point_z(coord1,dz);
@@ -139,7 +142,8 @@ void handle_line(Coord3D coord1, Coord3D coord2, double dz, double angle)
 }
 
 // project 3D coords into 2D and mark them on the map
-void project_point_to_screen(Coord3D coord)
+void
+project_point_to_screen(Coord3D coord)
 {
 	Coord point = project(coord);
 	// centering the point (otherwise it defaults to upper left of the box)
@@ -148,7 +152,8 @@ void project_point_to_screen(Coord3D coord)
 	mark_point(point, point_size);
 }
 
-void project_line_to_screen(Coord3D coord1, Coord3D coord2)
+void
+project_line_to_screen(Coord3D coord1, Coord3D coord2)
 {
 	Coord normalized_coord = project(coord1);
 	Coord normalized_coord2 = project(coord2);
@@ -159,7 +164,8 @@ void project_line_to_screen(Coord3D coord1, Coord3D coord2)
 }
 
 // mark a "size" sized box at coord.
-void mark_point(Coord coord, int size)
+void
+mark_point(Coord coord, int size)
 {
 	for (double x = coord.x; x < coord.x + size; x++) {
 		for (double y = coord.y; y < coord.y + size; y++) {
@@ -173,13 +179,14 @@ void mark_point(Coord coord, int size)
 
 // find all the points that connect coord1 and coord2 and mark them.
 // Hacky, there's probably a better way to do this.
-void mark_line(Coord coord1, Coord coord2)
+void
+mark_line(Coord coord1, Coord coord2)
 {
 	double slope {};
 	if (static_cast<int>(coord1.x) != static_cast<int>(coord2.x)) {
 		slope = (coord2.y - coord1.y) / (coord2.x - coord1.x);
 	}
-	
+
 	double intercept {};
 	intercept = coord1.y - slope * coord1.x;
 
@@ -195,13 +202,13 @@ void mark_line(Coord coord1, Coord coord2)
 			size_t y = static_cast<size_t>(i);
 			map[x][y] = true;
 		}
-	
 	}
 }
 
 // project the 3D point into a 2D coordinate on screen 
 // 3D coords range between (-1, 1), 2D coords range between (0, height|width)
-constexpr Coord project(Coord3D coord)
+constexpr Coord
+project(Coord3D coord)
 {
 	Coord projected_coord = {coord.x/coord.z, coord.y/coord.z};
 	projected_coord.x = (projected_coord.x+1)/2.0*width;
@@ -211,12 +218,14 @@ constexpr Coord project(Coord3D coord)
 }
 
 // 3D point movement functions
-constexpr Coord3D translate_point_z(Coord3D coord, double dz)
+constexpr Coord3D
+translate_point_z(Coord3D coord, double dz)
 {
 	return {coord.x, coord.y, coord.z+dz};
 }
 
-constexpr Coord3D rotate_point_xz(Coord3D coord, double angle)
+constexpr Coord3D
+rotate_point_xz(Coord3D coord, double angle)
 {
 	const double c = std::cos(angle);
 	const double s = std::sin(angle);
@@ -228,7 +237,8 @@ constexpr Coord3D rotate_point_xz(Coord3D coord, double angle)
 }
 
 // create ppm file for current frame
-std::ofstream initFrame(int number)
+std::ofstream
+initFrame(int number)
 {
 	std::string fileName = "output/frame-" + std::to_string(number) + ".ppm";
 	std::ofstream f{fileName};
@@ -246,7 +256,8 @@ std::ofstream initFrame(int number)
 }
 
 // write pixel color codes on the ppm file based on the current state of PixelMap
-void draw_screen(std::ofstream &f)
+void
+draw_screen(std::ofstream &f)
 {
 	for (int y=0; y < height; y++) {
 		for (int x=0; x < width; x++) {
@@ -267,7 +278,8 @@ void draw_screen(std::ofstream &f)
 }
 
 // clear the map for the next frame
-void clear_screen()
+void
+clear_screen()
 {
 	for (int y=0; y < height; y++) {
 		for (int x=0; x < width; x++) {
