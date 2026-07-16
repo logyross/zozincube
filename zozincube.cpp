@@ -65,19 +65,18 @@ void	mark_point(Coord coord, int size);
 void	project_line_to_screen(Coord3D coord1, Coord3D coord2);
 void	project_point_to_screen(Coord3D coord);
 
-constexpr Coord	project(Coord3D coord);
+constexpr Coord		project(Coord3D coord);
 constexpr Coord3D	rotate_point_xz(Coord3D coord, double angle);
 constexpr Coord3D	translate_point_z(Coord3D coord, double dz);
 
 std::ofstream	initFrame(int number);
-
 
 int
 main()
 {
 	double dz = 1.0;
 	double angle = 0.0;
-	for (int t=0; t < frame_cnt; t++) {
+	for (int t=0;  t < frame_cnt; t++) {
 		if constexpr (do_move) {
 			dz += 1*dt;
 		}
@@ -159,6 +158,7 @@ project_line_to_screen(Coord3D coord1, Coord3D coord2)
 	Coord normalized_coord2 = project(coord2);
 
 	// because mark_line() is pretty hacky, we need to draw the same line twice from both directions.
+	// otherwise the lines briefly vanish during rotation.
 	mark_line(normalized_coord, normalized_coord2);
 	mark_line(normalized_coord2, normalized_coord);
 }
@@ -171,7 +171,10 @@ mark_point(Coord coord, int size)
 		for (double y = coord.y; y < coord.y + size; y++) {
 			if (x < width && x >= 0
 			&& y < height && y >= 0) {
-				map[static_cast<size_t>(x)][static_cast<size_t>(y)] = true;
+				size_t x_coord = static_cast<size_t>(x);
+				size_t y_coord = static_cast<size_t>(y);
+
+				map[x_coord][y_coord] = true;
 			}
 		}
 	}
@@ -182,15 +185,10 @@ mark_point(Coord coord, int size)
 void
 mark_line(Coord coord1, Coord coord2)
 {
-	double slope {};
-	if (static_cast<int>(coord1.x) != static_cast<int>(coord2.x)) {
-		slope = (coord2.y - coord1.y) / (coord2.x - coord1.x);
-	}
+	if ((coord1.x - coord2.x) != 0.0) {
+		double slope {(coord2.y - coord1.y) / (coord2.x - coord1.x)};
+		double intercept {coord1.y - slope * coord1.x};
 
-	double intercept {};
-	intercept = coord1.y - slope * coord1.x;
-
-	if (static_cast<int>(coord1.x) != static_cast<int>(coord2.x)) {
 		for (double i = coord1.x; i <= coord2.x; i++) {
 			size_t x = static_cast<size_t>(i);
 			size_t y = static_cast<size_t>(slope * i + intercept);
@@ -210,11 +208,11 @@ mark_line(Coord coord1, Coord coord2)
 constexpr Coord
 project(Coord3D coord)
 {
-	Coord projected_coord = {coord.x/coord.z, coord.y/coord.z};
-	projected_coord.x = (projected_coord.x+1)/2.0*width;
-	projected_coord.y = (1 - (projected_coord.y+1)/2.0)*height; 
-	return projected_coord;
+	Coord new_point = {coord.x/coord.z, coord.y/coord.z};
 
+	new_point.x = (new_point.x+1)/2.0*width;
+	new_point.y = (1 - (new_point.y+1)/2.0)*height; 
+	return new_point;
 }
 
 // 3D point movement functions
@@ -289,4 +287,3 @@ clear_screen()
 		}
 	}
 }
-
