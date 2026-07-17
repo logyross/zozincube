@@ -185,7 +185,7 @@ mark_point(Coord coord, int size)
 void
 mark_line(Coord coord1, Coord coord2)
 {
-	if ((coord1.x - coord2.x) != 0.0) {
+	if (static_cast<int>(coord1.x - coord2.x) != 0) {
 		double slope {(coord2.y - coord1.y) / (coord2.x - coord1.x)};
 		double intercept {coord1.y - slope * coord1.x};
 
@@ -238,7 +238,8 @@ rotate_point_xz(Coord3D coord, double angle)
 std::ofstream
 initFrame(int number)
 {
-	std::string fileName = "output/frame-" + std::to_string(number) + ".ppm";
+
+	std::string fileName = "frames/frame-" + std::to_string(number) + ".ppm";
 	std::ofstream f{fileName};
 
 	if (!f) {
@@ -250,6 +251,7 @@ initFrame(int number)
 	f << width << " " << height << "\n";
 	f << "255\n";
 
+	std::cout << "created new frame " << fileName << "\n";
 	return f;
 }
 
@@ -263,7 +265,7 @@ draw_screen(std::ofstream &f)
 			size_t y_coord = static_cast<size_t>(y);
 
 			if (map[x_coord][y_coord]) {
-				f.put(0xFF);
+				f.put(static_cast<char>(0xFF)); // casting compiler complains about 0xFF overflowing char
 				f.put(0x10);
 				f.put(0x10);
 			} else {
