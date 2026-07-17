@@ -14,5 +14,5 @@ $(BIN): $(SRC)
 .PHONY: release debug clean
 clean:
 	rm -f $(BIN)
-	rm cube.mp4
 	rm -rf frames/
+	rm cube.mp4

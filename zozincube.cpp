@@ -12,7 +12,7 @@ constexpr double dt 	= 1/fps;
 constexpr int point_size= 10;
 constexpr int frame_cnt = 120;
 constexpr bool do_rotate= true;
-constexpr bool do_move	= true;
+constexpr bool do_move	= false;
 
 // 2D boolean array that represents the current state of the screen (true means draw red) 
 using PixelMap = std::array<std::array<bool, static_cast<int>(height)>, static_cast<int>(width)>;
