@@ -8,8 +8,11 @@ debug: CXXFLAGS = -fsanitize=address -Wall -Wextra -Wpedantic -Weffc++ -pedantic
 debug: $(BIN)
 
 $(BIN): $(SRC)
+	mkdir frames/
 	$(CXX) $(CXXFLAGS) $(SRC) -o $(BIN)
 
 .PHONY: release debug clean
 clean:
 	rm -f $(BIN)
+	rm cube.mp4
+	rm -rf frames/
