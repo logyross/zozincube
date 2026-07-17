@@ -2,34 +2,23 @@
 A software rendered spinning wire cube in C++ inspired by tsoding's video
 
 # usage
-simply run the script at the root of the repository (`run.sh`). This will build and run the program which will create the individual animation frames.
+simply run the script at the root of the repository (`build_and_run.sh`). This will build and run the program which will create the individual animation frames.
 After that, it will try to use `ffmpeg` to collect the frames into an mp4 video and play it with `mpv`.
 If you only want to build the program you can simply run `make` or `make release` for release build or `make debug` for a debug build. (the script uses release build)
 # Dependencies
-## A C++17 compiler
+## A C++ compiler
+needs to be compatible with C++17
 
 ## ffmpeg
 The program uses `ffmpeg` to stitch together individual frames into a video. If you don't have it
-installed, you can manually check the frames using a image editor. The frames are saved in `output/` as .ppm files.
+installed, you can manually check the frames using an image editor. The frames are numbered and saved in `frames/` as .ppm files.
 
 ## mpv
 After the video is saved, it's played with mpv.
-if you don't have mpv, you can manually play the video using a different video player (It's saved as output.mp4)
-
-# instructions
-- simply run "run.sh"
-
-## handle point, handle line
-
-- determine how a 3D point will reflect on 2D surface
-- apply movement (rotation, translation)
-
-# what should be
-
-## project point, project line
-
-## apply_rotation
-
-## apply translation
+if you don't have mpv, you can manually play the video using a different video player (It's saved as `cube.mp4`)
 
 
+# references
+- original video by tsoding: https://www.youtube.com/watch?v=qjWkNZ0SXfo
+- idea to use ppm files and ffmpeg for animation: https://www.youtube.com/watch?v=xNX9H_ZkfNE
+- idea for finding all points that connect two coords: https://stackoverflow.com/questions/13491676/get-all-pixel-coordinates-between-2-points
