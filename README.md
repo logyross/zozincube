@@ -1,8 +1,8 @@
 # zozincube
 A software rendered spinning wire cube in C++ inspired by tsoding's video
 
-# usage
-simply run the script at the root of the repository (`build_and_run.sh`). This will build and run the program which will create the individual animation frames.
+# Usage
+Simply run the script at the root of the repository (`build_and_run.sh`). This will build and run the program which will create the individual animation frames.
 After that, it will try to use `ffmpeg` to collect the frames into an mp4 video and play it with `mpv`.
 If you only want to build the program you can simply run `make` or `make release` for release build or `make debug` for a debug build. (the script uses release build)
 # Dependencies
