@@ -1,7 +1,9 @@
 # zozincube
 A software rendered spinning wire cube in C++ inspired by tsoding's video.
 
-![gif](https://github.com/logyross/zozincube/blob/main/cube.gif)
+
+<img width="480" height="480" alt="cube" src="https://github.com/user-attachments/assets/b3ddd9b8-c2a5-4ae1-8519-b9d6c0710b67" />
+
 
 # Usage
 Simply run the script at the root of the repository (`build_and_run.sh`). This will build and run the program which will create the individual animation frames.
