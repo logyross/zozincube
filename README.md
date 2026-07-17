@@ -9,7 +9,7 @@ After that, it will try to use `ffmpeg` to collect the frames into an mp4 video 
 If you only want to build the program you can simply run `make` or `make release` for release build or `make debug` for a debug build. (the script uses release build)
 # Dependencies
 ## A C++ compiler
-needs to be compatible with C++17
+Needs to be compatible with C++17
 
 ## ffmpeg
 The program uses `ffmpeg` to stitch together individual frames into a video. If you don't have it
@@ -17,7 +17,7 @@ installed, you can manually check the frames using an image editor. The frames a
 
 ## mpv
 After the video is saved, it's played with mpv.
-if you don't have mpv, you can manually play the video using a different video player (It's saved as `cube.mp4`)
+if you don't have mpv, you can manually play the video using a different video player (It's saved as `cube.mp4`).
 
 
 # references
